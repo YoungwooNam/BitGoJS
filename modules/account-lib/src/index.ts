@@ -167,6 +167,9 @@ export { Xdc };
 import * as Wemix from '@bitgo/sdk-coin-wemix';
 export { Wemix };
 
+import * as Polyx from '@bitgo/sdk-coin-polyx';
+export { Polyx };
+
 const coinBuilderMap = {
   trx: Trx.WrappedBuilder,
   ttrx: Trx.WrappedBuilder,
