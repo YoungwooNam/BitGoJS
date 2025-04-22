@@ -90,21 +90,21 @@ export function getHexAddressFromBase58Address(base58: string): string {
   // pulled from: https://github.com/TRON-US/tronweb/blob/dcb8efa36a5ebb65c4dab3626e90256a453f3b0d/src/utils/help.js#L17
   // but they don't surface this call in index.js
   const bytes = tronweb.utils.crypto.decodeBase58Address(base58);
-  return getHexAddressFromByteArray(bytes);
+  return getHexAddressFromByteArray(bytes as any);
 }
 
 /**
  * @param privateKey
  */
 export function getPubKeyFromPriKey(privateKey: TronBinaryLike): ByteArray {
-  return tronweb.utils.crypto.getPubKeyFromPriKey(privateKey);
+  return tronweb.utils.crypto.getPubKeyFromPriKey(privateKey as any);
 }
 
 /**
  * @param privateKey
  */
 export function getAddressFromPriKey(privateKey: TronBinaryLike): ByteArray {
-  return tronweb.utils.crypto.getAddressFromPriKey(privateKey);
+  return tronweb.utils.crypto.getAddressFromPriKey(privateKey as any);
 }
 
 /**
@@ -127,7 +127,7 @@ export function getBase58AddressFromHex(hex: string): string {
  * @param transaction
  */
 export function signTransaction(privateKey: string | ByteArray, transaction: TransactionReceipt): TransactionReceipt {
-  return tronweb.utils.crypto.signTransaction(privateKey, transaction);
+  return tronweb.utils.crypto.signTransaction(privateKey, transaction) as unknown as TransactionReceipt;
 }
 
 /**
@@ -136,14 +136,14 @@ export function signTransaction(privateKey: string | ByteArray, transaction: Tra
  * @param useTronHeader
  */
 export function signString(message: string, privateKey: string | ByteArray, useTronHeader = true): string {
-  return tronweb.Trx.signString(message, privateKey, useTronHeader);
+  return tronweb.Trx.signString(message, privateKey as any, useTronHeader);
 }
 
 /**
  * @param pubBytes
  */
 export function getRawAddressFromPubKey(pubBytes: TronBinaryLike): ByteArray {
-  return tronweb.utils.crypto.computeAddress(pubBytes);
+  return tronweb.utils.crypto.computeAddress(pubBytes as any);
 }
 
 /**
@@ -174,6 +174,14 @@ export function decodeTransaction(hexString: string): RawData {
     case 'type.googleapis.com/protocol.TriggerSmartContract':
       contractType = ContractType.TriggerSmartContract;
       contract = exports.decodeTriggerSmartContract(rawTransaction.contracts[0].parameter.value);
+      break;
+    case 'type.googleapis.com/protocol.WithdrawExpireUnfreezeContract':
+      contract = decodeWithdrawExpireUnfreezeContract(rawTransaction.contracts[0].parameter.value);
+      contractType = ContractType.WithdrawExpireUnfreeze;
+      break;
+    case 'type.googleapis.com/protocol.UnfreezeBalanceV2Contract':
+      contract = decodeUnfreezeBalanceV2Contract(rawTransaction.contracts[0].parameter.value);
+      contractType = ContractType.UnfreezeBalanceV2;
       break;
     default:
       throw new UtilsError('Unsupported contract type');
@@ -358,6 +366,97 @@ export function decodeAccountPermissionUpdateContract(base64: string): AccountPe
     witness,
     actives: activeList,
   };
+}
+
+/**
+ * Deserialize the segment of the txHex corresponding with unfreeze balance contract
+ *
+ * @param {string} base64 - The base64 encoded contract data
+ * @returns {Array} - Array containing the decoded unfreeze contract
+ */
+export function decodeUnfreezeBalanceV2Contract(base64: string): any[] {
+  let unfreezeContract;
+  try {
+    unfreezeContract = protocol.UnfreezeBalanceContract.decode(Buffer.from(base64, 'base64')).toJSON();
+  } catch (e) {
+    throw new UtilsError('There was an error decoding the unfreeze contract in the transaction.');
+  }
+
+  if (!unfreezeContract.ownerAddress) {
+    throw new UtilsError('Owner address does not exist in this unfreeze contract.');
+  }
+
+  if (!unfreezeContract.resource) {
+    throw new UtilsError('Resource type does not exist in this unfreeze contract.');
+  }
+
+  if (!unfreezeContract.hasOwnProperty('unfrozenBalance')) {
+    throw new UtilsError('Unfreeze balance does not exist in this unfreeze contract.');
+  }
+
+  // deserialize attributes
+  const owner_address = getBase58AddressFromByteArray(
+    getByteArrayFromHexAddress(Buffer.from(unfreezeContract.ownerAddress, 'base64').toString('hex'))
+  );
+
+  // Convert ResourceCode enum value to string resource name
+  const resourceValue = unfreezeContract.resource;
+  let resource: string;
+  if (resourceValue === protocol.ResourceCode.BANDWIDTH) {
+    resource = 'BANDWIDTH';
+  } else if (resourceValue === protocol.ResourceCode.ENERGY) {
+    resource = 'ENERGY';
+  } else {
+    throw new UtilsError(`Unknown resource type: ${resourceValue}`);
+  }
+
+  const unfreeze_balance = unfreezeContract.unfrozenBalance;
+
+  return [
+    {
+      parameter: {
+        value: {
+          resource,
+          unfreeze_balance: Number(unfreeze_balance),
+          owner_address,
+        },
+      },
+    },
+  ];
+}
+
+/**
+ * Deserialize the segment of the txHex corresponding with withdraw expire unfreeze contract
+ *
+ * @param {string} base64 - The base64 encoded contract data
+ * @returns {Array} - Array containing the decoded withdraw contract
+ */
+export function decodeWithdrawExpireUnfreezeContract(base64: string): any[] {
+  let withdrawContract;
+  try {
+    withdrawContract = protocol.WithdrawBalanceContract.decode(Buffer.from(base64, 'base64')).toJSON();
+  } catch (e) {
+    throw new UtilsError('There was an error decoding the withdraw contract in the transaction.');
+  }
+
+  if (!withdrawContract.ownerAddress) {
+    throw new UtilsError('Owner address does not exist in this withdraw contract.');
+  }
+
+  // deserialize attributes
+  const owner_address = getBase58AddressFromByteArray(
+    getByteArrayFromHexAddress(Buffer.from(withdrawContract.ownerAddress, 'base64').toString('hex'))
+  );
+
+  return [
+    {
+      parameter: {
+        value: {
+          owner_address,
+        },
+      },
+    },
+  ];
 }
 
 /**
