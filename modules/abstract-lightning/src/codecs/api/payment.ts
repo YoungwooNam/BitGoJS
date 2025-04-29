@@ -1,7 +1,7 @@
 import * as t from 'io-ts';
 import { BigIntFromString } from 'io-ts-types/BigIntFromString';
 import { DateFromISOString } from 'io-ts-types/DateFromISOString';
-import { LightningPaymentRequest, optionalString } from '@bitgo/public-types';
+import { optionalString } from '@bitgo/public-types';
 
 // codecs for lightning wallet payment related apis
 
@@ -88,15 +88,39 @@ export const PaymentQuery = t.partial(
 );
 export type PaymentQuery = t.TypeOf<typeof PaymentQuery>;
 
-export const SubmitPaymentParams = t.intersection([
-  LightningPaymentRequest,
-  t.type({
-    passphrase: t.string,
-  }),
-  t.partial({
-    sequenceId: optionalString,
-    comment: optionalString,
-  }),
+export const SubmitPaymentParams = t.union([
+  // Invoice payment option
+  t.intersection([
+    t.type({
+      invoice: t.string,
+      amountMsat: t.bigint,
+      passphrase: t.string,
+    }),
+    t.partial({
+      sequenceId: optionalString,
+      comment: optionalString,
+      feeLimitMsat: t.union([t.bigint, t.undefined]),
+      feeLimitRatio: t.union([t.number, t.undefined]),
+      lnurlData: t.partial({
+        description: optionalString,
+        successAction: t.unknown,
+      }),
+    }),
+  ]),
+  // LNURL payment option
+  t.intersection([
+    t.type({
+      lnurl: t.string,
+      amountMsat: t.bigint,
+      passphrase: t.string,
+    }),
+    t.partial({
+      sequenceId: optionalString,
+      comment: optionalString,
+      feeLimitMsat: t.union([t.bigint, t.undefined]),
+      feeLimitRatio: t.union([t.number, t.undefined]),
+    }),
+  ]),
 ]);
 
 export type SubmitPaymentParams = t.TypeOf<typeof SubmitPaymentParams>;
