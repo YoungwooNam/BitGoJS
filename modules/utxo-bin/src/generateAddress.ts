@@ -9,9 +9,9 @@ import { formatTree } from './format';
 import { KeyOptions, getRootWalletKeys } from './args';
 
 function getDefaultChainCodes(): number[] {
-  return utxolib.bitgo.chainCodes.filter(
-    // these are rare and show an annoying warning in stderr
-    (c) => utxolib.bitgo.scriptTypeForChain(c) !== 'p2tr' && utxolib.bitgo.scriptTypeForChain(c) !== 'p2trMusig2'
+  const chainCodes = utxolib.bitgo.chainCodes as number[];
+  return chainCodes.filter(
+    (c: any) => utxolib.bitgo.scriptTypeForChain(c) !== 'p2tr' && utxolib.bitgo.scriptTypeForChain(c) !== 'p2trMusig2'
   );
 }
 

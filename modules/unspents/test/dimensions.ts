@@ -163,7 +163,7 @@ describe('Dimensions from unspent types', function () {
       ).should.eql(Dimensions.sum({ nP2trKeypathInputs: 1 }));
     });
 
-    Dimensions.fromUnspents(chainCodes.map((chain) => ({ chain }))).should.eql(
+    Dimensions.fromUnspents((chainCodes as any[]).map((chain: any) => ({ chain }))).should.eql(
       new Dimensions({
         nP2shP2wshInputs: 2,
         nP2shInputs: 2,
@@ -177,7 +177,7 @@ describe('Dimensions from unspent types', function () {
     );
 
     Dimensions.fromUnspents(
-      chainCodes.map((chain) => ({ chain })),
+      (chainCodes as any[]).map((chain: any) => ({ chain })),
       { p2tr: { scriptPathLevel: 1 }, p2trMusig2: { scriptPathLevel: undefined } }
     ).should.eql(
       new Dimensions({

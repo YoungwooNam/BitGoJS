@@ -39,7 +39,8 @@ function run(coin: AbstractUtxoCoin) {
   const keychains = keychainsBip32.map((k) => ({ pub: k.neutered().toBase58() }));
 
   function getParameters(): GenerateFixedScriptAddressOptions[] {
-    return [undefined, ...chainCodes].map((chain) => ({ keychains, chain }));
+    const validChainCodes = Array.isArray(chainCodes) ? chainCodes : [];
+    return [undefined, ...validChainCodes].map((chain) => ({ keychains, chain }));
   }
 
   describe(`UTXO Addresses ${coin.getChain()}`, function () {
